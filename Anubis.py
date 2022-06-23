@@ -1,18 +1,18 @@
 #############      author => Anubis Graduation Team        ############
 #############      this project is part of my graduation project and it intends to make a fully functioned IDE from scratch    ########
-#############      I've borrowed a function (serial_ports()) from a guy in stack overflow whome I can't remember his name, so I gave hime the copyrights of this function, thank you  ########
+#############      I've borrowed a function (serial_ports()) from a guy in stack overflow whome I can't remember his name, so I gave hime\ the copyrights of this function, thank you  ########
 
 
 import sys
 import glob
 import serial
 
+import CSharp_Coloring
 import Python_Coloring
 from PyQt5 import QtCore
 from PyQt5 import QtGui
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
-from pathlib import Path
 
 def serial_ports():
     """ Lists serial port names
@@ -69,7 +69,8 @@ class Signal(QObject):
 # Making text editor as A global variable (to solve the issue of being local to (self) in widget class)
 text = QTextEdit
 text2 = QTextEdit
-
+#Add Language as global variable
+cur_lang = "Python" #Default to python
 #
 #
 #
@@ -185,7 +186,11 @@ class Widget(QWidget):
     # defining a new Slot (takes string) to save the text inside the first text editor
     @pyqtSlot(str)
     def Saving(s):
-        with open('main.py', 'w') as f:
+        #Change saved file extension based on current language mode.
+        file_extension = "py"
+        if cur_lang == "C#":
+            file_extension = "cs"
+        with open(f"main.{file_extension}", 'w') as f:
             TEXT = text.toPlainText()
             f.write(TEXT)
 
@@ -199,6 +204,9 @@ class Widget(QWidget):
 
         nn = self.sender().model().filePath(index)
         nn = tuple([nn])
+
+        #TODO Check
+        UI.python_analyzer() if nn[0].split(".")[1] == "py" else UI.csharp_analyzer()
 
         if nn[0]:
             f = open(nn[0],'r')
@@ -258,8 +266,10 @@ class UI(QMainWindow):
 
         # I have three menu items
         filemenu = menu.addMenu('File')
+        self.language_menu = menu.addMenu('Language')
         Port = menu.addMenu('Port')
         Run = menu.addMenu('Run')
+
 
         # As any PC or laptop have many ports, so I need to list them to the User
         # so I made (Port_Action) to add the Ports got from (serial_ports()) function
@@ -299,12 +309,19 @@ class UI(QMainWindow):
         filemenu.addAction(Close_Action)
         filemenu.addAction(Open_Action)
 
+        python_action = QAction('Python', self)
+        python_action.triggered.connect(self.python_analyzer)
+        csharp_action = QAction('C#', self)
+        csharp_action.triggered.connect(self.csharp_analyzer)
+
+        self.language_menu.addAction(python_action)
+        self.language_menu.addAction(csharp_action)
 
         # Seting the window Geometry
         self.setGeometry(200, 150, 600, 500)
         self.setWindowTitle('Anubis IDE')
         self.setWindowIcon(QtGui.QIcon('Anubis.png'))
-        
+
 
         widget = Widget()
 
@@ -344,12 +361,23 @@ class UI(QMainWindow):
     def open(self):
         file_name = QFileDialog.getOpenFileName(self,'Open File','/home')
 
+        self.python_analyzer() if file_name[0].split('.')[1] == "py" else self.csharp_analyzer()
+
         if file_name[0]:
             f = open(file_name[0],'r')
             with f:
                 data = f.read()
             self.Open_Signal.reading.emit(data)
 
+    def python_analyzer(self):
+        global language
+        language = "Python"
+        Python_Coloring.PythonHighlighter(text)
+
+    def csharp_analyzer(self):
+        global language
+        language = "C#"
+        CSharp_Coloring.CSharpHighlighter(text)
 
 #
 #
